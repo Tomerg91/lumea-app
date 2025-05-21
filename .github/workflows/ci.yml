@@ -1,0 +1,75 @@
+name: Lumea CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop # Or any other branches you want to run CI on
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    env:
+      # For Supabase CLI - these are dummy values for local/CI use if needed for non-PROD actions
+      # For actual deployments, Supabase GitHub Action will use secrets
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }} # For staging deploys
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }} # For staging deploys
+      # PROJECT_ID will be grabbed by CLI if linked, or set via env if needed for specific commands
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # As per project requirements (Node 20 LTS)
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci # Use ci for cleaner installs in CI
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      # Supabase Migrations Deployment to Staging (only on push to main)
+      - name: Install Supabase CLI
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm install -g supabase@latest # Or use supabase/setup-cli-action@v1
+
+      - name: Link Supabase Project (Staging)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: supabase link --project-ref ${{ secrets.STAGING_SUPABASE_PROJECT_REF }} # Secret needed
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.STAGING_SUPABASE_ACCESS_TOKEN }}
+          # SUPABASE_DB_PASSWORD is used by push directly
+
+      - name: Deploy Supabase Migrations (Staging)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: supabase db push
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+
+      - name: Notify on failure (Example with a generic message)
+        if: failure()
+        run: |
+          echo ":x: CI Job Failed for Lumea App!"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Job: ${{ github.job }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          # Add more sophisticated notification here, e.g., Slack or email
+          # Example for Slack using a community action (if you add one):
+          # - name: Notify Slack on Failure
+          #   uses: rtCamp/action-slack-notify@v2
+          #   env:
+          #     SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }} # From project requirements
+          #     SLACK_MESSAGE: ':x: CI Job Failed! Workflow: ${{ github.workflow }}, Job: ${{ github.job }}, Branch: ${{ github.ref }}'
+          #     SLACK_COLOR: 'danger' 

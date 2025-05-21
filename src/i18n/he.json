@@ -1,0 +1,28 @@
+{
+  "common": {
+    "greeting": "שלום עולם!",
+    "continue": "המשך",
+    "error": "שגיאה",
+    "success": "הצלחה",
+    "thankYou": "תודה רבה"
+  },
+  "loginScreen": {
+    "title": "כניסה למערכת",
+    "emailPlaceholder": "דואר אלקטרוני",
+    "passwordPlaceholder": "סיסמה",
+    "signupSuccess": "ההרשמה הצליחה! אנא בדוק את האימייל שלך לאישור.",
+    "loginButton": "כניסה",
+    "signupButton": "הרשמה"
+  },
+  "onboardingRoleScreen": {
+    "title": "בחר את תפקידך",
+    "coach": "מאמן/ת",
+    "client": "לקוח/ה",
+    "youSelected": "בחרת:",
+    "selectRoleError": "אנא בחר תפקיד כדי להמשיך."
+  },
+  "splashScreen": {
+    "appName": "לומיאה",
+    "loading": "טוען..."
+  }
+} 

@@ -1,0 +1,65 @@
+name: Backup Supabase Database
+
+on:
+  schedule:
+    # Runs daily at 03:00 UTC. Adjust as needed.
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }} # General access token for CLI
+      SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_SUPABASE_DB_PASSWORD }} # Production DB password
+      PROJECT_ID: ${{ secrets.PRODUCTION_SUPABASE_PROJECT_REF }} # Production Project Ref
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout repository (optional, for access to scripts if any)
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (for Supabase CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Supabase CLI
+        run: npm install -g supabase@latest
+
+      - name: Link Supabase Project (Production)
+        run: supabase link --project-ref $PROJECT_ID
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Create Supabase Database Dump
+        run: |
+          FILENAME="lumea-db-backup-$(date +%Y-%m-%d-%H-%M-%S).sql.gz"
+          supabase db dump --data-only -f $FILENAME --password "$SUPABASE_DB_PASSWORD"
+          # supabase db dump with -f and .gz extension should already be gzipped.
+          echo "BACKUP_FILE=$FILENAME" >> $GITHUB_ENV
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp ${{ env.BACKUP_FILE }} s3://${S3_BUCKET}/lumea-backups/${{ env.BACKUP_FILE }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Clean up local backup file
+        if: always() # Always run cleanup
+        run: rm -f ${{ env.BACKUP_FILE }}
+
+      - name: Notify Slack on Failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2.2.0 # Use a specific version
+        env:
+          SLACK_TITLE: 'Lumea Supabase Backup FAILED'
+          SLACK_MESSAGE: 'Nightly Supabase database backup to S3 failed. Please check GitHub Actions logs.'
+          SLACK_COLOR: 'danger'
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }} 

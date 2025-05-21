@@ -1,0 +1,28 @@
+{
+  "common": {
+    "greeting": "Hello World!",
+    "continue": "Continue",
+    "error": "Error",
+    "success": "Success",
+    "thankYou": "Thank You"
+  },
+  "loginScreen": {
+    "title": "Login",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "signupSuccess": "Signup successful! Please check your email to confirm.",
+    "loginButton": "Login",
+    "signupButton": "Sign Up"
+  },
+  "onboardingRoleScreen": {
+    "title": "Select Your Role",
+    "coach": "Coach",
+    "client": "Client",
+    "youSelected": "You selected:",
+    "selectRoleError": "Please select a role to continue."
+  },
+  "splashScreen": {
+    "appName": "Lumea",
+    "loading": "Loading..."
+  }
+} 
